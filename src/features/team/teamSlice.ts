@@ -1,40 +1,66 @@
 // src/features/team/teamSlice.ts
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { AppThunk } from "../../redux/store";
+import { createSlice, PayloadAction, createAsyncThunk } from "@reduxjs/toolkit";
+import axios from "axios";
+import { ReviewerData } from "../../shared/model/reviewerData";
 import { RowData } from "../../shared/model/rowData";
 
 interface TeamState {
+  init: boolean;
   data: RowData[];
+  totalCount: number;
   pageNumber: number;
   pageSize: number;
   loading: boolean;
   error: string | null;
 }
 
+interface JsonResponse {
+  totalCount: number;
+  status: {
+    success: boolean;
+    message: string;
+  };
+  value: ReviewerData[];
+}
+
 const initialState: TeamState = {
+  init: false,
   data: [],
+  totalCount: 0,
   pageNumber: 1,
   pageSize: 10,
   loading: false,
   error: null,
 };
 
+export const fetchTeamData = createAsyncThunk(
+  "team/fetchTeamData",
+  async (params: { pageNumber: number; pageSize: number }) => {
+    try {
+      const response = await axios.get<JsonResponse>(
+        `https://localhost:7046/api/Reviewer?pageNo=${params.pageNumber}&pageSize=${params.pageSize}`
+      );
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.message);
+    }
+  }
+);
+
 const teamSlice = createSlice({
   name: "team",
   initialState,
   reducers: {
-    fetchDataStart: (state) => {
-      state.loading = true;
-      state.error = null;
-    },
-    fetchDataSuccess: (state, action: PayloadAction<RowData[]>) => {
-      state.data = action.payload;
+    resetTeam: (state) => {
+      state.init = false;
+      state.data = [];
+      state.pageNumber = 1;
+      state.pageSize = 10;
       state.loading = false;
       state.error = null;
     },
-    fetchDataFailure: (state, action: PayloadAction<string>) => {
-      state.loading = false;
-      state.error = action.payload;
+    setFetchedInitialData: (state) => {
+      state.init = true;
     },
     setPageSize: (state, action: PayloadAction<number>) => {
       state.pageSize = action.payload;
@@ -43,34 +69,36 @@ const teamSlice = createSlice({
       state.pageNumber = action.payload;
     },
   },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchTeamData.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(
+        fetchTeamData.fulfilled,
+        (state, action: PayloadAction<JsonResponse>) => {
+          state.data = action.payload.value.map((r: ReviewerData) => {
+            return {
+              id: r.id,
+              name: r.firstName + " " + r.lastName,
+            };
+          });
+          state.totalCount = action.payload.totalCount;
+          state.loading = false;
+          state.error = null;
+        }
+      )
+      .addCase(fetchTeamData.rejected, (state, action) => {
+        state.loading = false;
+        state.totalCount = 0;
+        state.error =
+          action.error.message || "An error occurred while fetching data";
+      });
+  },
 });
 
-export const {
-  fetchDataStart,
-  fetchDataSuccess,
-  fetchDataFailure,
-  setPageSize,
-  setPageNumber,
-} = teamSlice.actions;
-
-export const fetchTeamData = (
-  pageNo: number,
-  pageSize: number
-): AppThunk => async (dispatch) => {
-  dispatch(fetchDataStart());
-  try {
-    const response = await fetch(
-      `https://localhost:7046/api/Reviewer?pageNo=${pageNo}&pageSize=${pageSize}`
-    );
-    if (!response.ok) {
-      const errorMessage = await response.text();
-      throw new Error(errorMessage);
-    }
-    const data: RowData[] = await response.json();
-    dispatch(fetchDataSuccess(data));
-  } catch (error: any) {
-    dispatch(fetchDataFailure(error.message));
-  }
-};
+export const { setPageSize, setPageNumber, setFetchedInitialData, resetTeam } =
+  teamSlice.actions;
 
 export default teamSlice.reducer;
