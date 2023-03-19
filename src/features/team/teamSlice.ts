@@ -1,4 +1,5 @@
 // src/features/team/teamSlice.ts
+import { GridSortItem } from "@mui/x-data-grid/models";
 import { createSlice, PayloadAction, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 import { ReviewerData } from "../../shared/model/reviewerData";
@@ -7,11 +8,13 @@ import { RowData } from "../../shared/model/rowData";
 interface TeamState {
   init: boolean;
   data: RowData[];
+  sortItem: GridSortItem | null;
   totalCount: number;
   pageNumber: number;
   pageSize: number;
   loading: boolean;
   error: string | null;
+  
 }
 
 interface JsonResponse {
@@ -26,6 +29,7 @@ interface JsonResponse {
 const initialState: TeamState = {
   init: false,
   data: [],
+  sortItem: null,
   totalCount: 0,
   pageNumber: 1,
   pageSize: 10,
@@ -33,13 +37,19 @@ const initialState: TeamState = {
   error: null,
 };
 
+function capitalizeFirstLetter(str: string): string {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
 export const fetchTeamData = createAsyncThunk(
   "team/fetchTeamData",
-  async (params: { pageNumber: number; pageSize: number }) => {
+  async (params: { pageNumber: number; pageSize: number; sortItem: GridSortItem | null}) => {
     try {
-      const response = await axios.get<JsonResponse>(
-        `https://localhost:7046/api/Reviewer?pageNo=${params.pageNumber}&pageSize=${params.pageSize}`
-      );
+      let url = `https://localhost:7046/api/Reviewer?pageNo=${params.pageNumber}&pageSize=${params.pageSize}`
+      if(params.sortItem){
+        url = url + `&sortColumn=${params.sortItem.field === 'name' ? 'FirstName': capitalizeFirstLetter(params.sortItem.field)}&sortOrder=${params.sortItem.sort}`
+      }
+      const response = await axios.get<JsonResponse>( url );
       return response.data;
     } catch (error: any) {
       throw new Error(error.message);
@@ -67,6 +77,9 @@ const teamSlice = createSlice({
     },
     setPageNumber: (state, action: PayloadAction<number>) => {
       state.pageNumber = action.payload;
+    },
+    setSortItem: (state, action: PayloadAction<GridSortItem>) => {
+      state.sortItem = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -98,7 +111,7 @@ const teamSlice = createSlice({
   },
 });
 
-export const { setPageSize, setPageNumber, setFetchedInitialData, resetTeam } =
+export const { setPageSize, setPageNumber, setFetchedInitialData, resetTeam, setSortItem } =
   teamSlice.actions;
 
 export default teamSlice.reducer;

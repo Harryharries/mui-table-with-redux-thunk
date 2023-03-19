@@ -3,9 +3,9 @@ import { tokens } from "../../theme";
 import Header from "../../shared/component/Header";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "../../redux/store";
-import { fetchTeamData, setFetchedInitialData, resetTeam } from "./teamSlice";
+import { fetchTeamData, setFetchedInitialData, resetTeam, setSortItem } from "./teamSlice";
 import { useEffect } from "react";
-import { DataGrid, GridPaginationModel } from "@mui/x-data-grid";
+import { DataGrid, GridPaginationModel, GridSortModel } from "@mui/x-data-grid";
 import { setPageSize, setPageNumber } from "../team/teamSlice";
 import { GridOverlay } from "@mui/x-data-grid";
 import { CircularProgress } from "@mui/material";
@@ -35,6 +35,7 @@ const Team = () => {
   const teamData = useSelector((state: RootState) => state.team.data);
   const pageNumber = useSelector((state: RootState) => state.team.pageNumber);
   const pageSize = useSelector((state: RootState) => state.team.pageSize);
+  const sortItem = useSelector((state: RootState) => state.team.sortItem);
   const totalRowCount = useSelector(
     (state: RootState) => state.team.totalCount
   );
@@ -62,24 +63,21 @@ const Team = () => {
     if (!init) {
       dispatch(setFetchedInitialData());
     } else {
-      console.log(
-        "Fetching data with pageNumber:",
-        pageNumber,
-        "pageSize:",
-        pageSize
-      );
-      dispatch(fetchTeamData({ pageNumber, pageSize }));
+      dispatch(fetchTeamData({ pageNumber, pageSize, sortItem }));
     }
-  }, [dispatch, pageNumber, pageSize, init]);
+  }, [dispatch, pageNumber, pageSize,sortItem, init]);
 
   const handlePaginationModelChange = (model: GridPaginationModel) => {
-    console.log(model);
     if (model.page !== pageNumber - 1) {
       dispatch(setPageNumber(model.page + 1));
     }
     if (model.pageSize !== pageSize) {
       dispatch(setPageSize(model.pageSize));
     }
+  };
+
+  const handleSortModelChange = (model: GridSortModel) => {
+    dispatch(setSortItem(model[0]));
   };
 
   return (
@@ -120,8 +118,12 @@ const Team = () => {
           components={{ LoadingOverlay: CustomLoadingOverlay }}
           rowCount={totalRowCount}
           paginationMode="server"
+          sortingMode="server"
           loading={loading}
           initialState={{
+            sorting:{
+
+            },
             pagination: {
               paginationModel: {
                 page: pageNumber - 1,
@@ -130,6 +132,7 @@ const Team = () => {
             },
           }}
           onPaginationModelChange={handlePaginationModelChange}
+          onSortModelChange={handleSortModelChange}
           pageSizeOptions={[10, 25, 50]}
           keepNonExistentRowsSelected
         ></DataGrid>
