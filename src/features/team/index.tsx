@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import { Box, useTheme } from "@mui/material";
 import { tokens } from "../../theme";
 import Header from "../../shared/component/Header";
@@ -9,6 +10,7 @@ import { DataGrid, GridPaginationModel, GridSortModel } from "@mui/x-data-grid";
 import { setPageSize, setPageNumber } from "../team/teamSlice";
 import { GridOverlay } from "@mui/x-data-grid";
 import { CircularProgress } from "@mui/material";
+import { withSnackbar } from "../../core/WithSnackbar";
 
 const CustomLoadingOverlay = () => {
   const theme = useTheme();
@@ -27,7 +29,8 @@ const CustomLoadingOverlay = () => {
   );
 };
 
-const Team = () => {
+const Team = (props: { snackbarShowMessage: any; }) => {
+  const { snackbarShowMessage } = props;
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
   const dispatch = useDispatch<AppDispatch>();
@@ -41,6 +44,7 @@ const Team = () => {
   );
   const loading = useSelector((state: RootState) => state.team.loading);
   const init = useSelector((state: RootState) => state.team.init);
+  const error = useSelector((state: RootState) => state.team.error);
 
   const columns = [
     { field: "id", headerName: "ID" },
@@ -58,6 +62,12 @@ const Team = () => {
       dispatch(resetTeam());
     };
   }, [dispatch]);
+
+  useEffect(() => {
+    if (error) {
+      snackbarShowMessage(`Error: ${error}`, "error");
+    }
+  }, [error]);
 
   useEffect(() => {
     if (!init) {
@@ -141,4 +151,4 @@ const Team = () => {
   );
 };
 
-export default Team;
+export default withSnackbar(Team);
