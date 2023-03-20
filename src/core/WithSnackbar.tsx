@@ -3,7 +3,7 @@ import Snackbar, { SnackbarCloseReason } from "@mui/material/Snackbar";
 import Slide, { SlideProps } from "@mui/material/Slide";
 import Alert, { AlertProps } from "@mui/material/Alert";
 
-interface WithSnackbarProps {
+export interface WithSnackbarProps {
   snackbarShowMessage: (message: string, severity?: AlertProps['severity'], duration?: number) => void;
 }
 

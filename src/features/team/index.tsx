@@ -4,13 +4,21 @@ import { tokens } from "../../theme";
 import Header from "../../shared/component/Header";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "../../redux/store";
-import { fetchTeamData, setFetchedInitialData, resetTeam, setSortItem } from "./teamSlice";
+import {
+  fetchTeamData,
+  setFetchedInitialData,
+  resetTeam,
+  setSortItem,
+  setFilter,
+} from "./teamSlice";
 import { useEffect } from "react";
 import { DataGrid, GridPaginationModel, GridSortModel } from "@mui/x-data-grid";
 import { setPageSize, setPageNumber } from "../team/teamSlice";
 import { GridOverlay } from "@mui/x-data-grid";
 import { CircularProgress } from "@mui/material";
-import { withSnackbar } from "../../core/WithSnackbar";
+import { withSnackbar, WithSnackbarProps } from "../../core/WithSnackbar";
+import FilterComponent from "./teamFilter";
+import { RowDataFilter } from "../../shared/model/rowDataFiliter";
 
 const CustomLoadingOverlay = () => {
   const theme = useTheme();
@@ -28,9 +36,9 @@ const CustomLoadingOverlay = () => {
     </GridOverlay>
   );
 };
+interface TeamProps extends WithSnackbarProps {}
 
-const Team = (props: { snackbarShowMessage: any; }) => {
-  const { snackbarShowMessage } = props;
+const Team: React.FC<TeamProps> = (props) => {
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
   const dispatch = useDispatch<AppDispatch>();
@@ -39,6 +47,8 @@ const Team = (props: { snackbarShowMessage: any; }) => {
   const pageNumber = useSelector((state: RootState) => state.team.pageNumber);
   const pageSize = useSelector((state: RootState) => state.team.pageSize);
   const sortItem = useSelector((state: RootState) => state.team.sortItem);
+  const filter = useSelector((state: RootState) => state.team.filter);
+
   const totalRowCount = useSelector(
     (state: RootState) => state.team.totalCount
   );
@@ -65,7 +75,7 @@ const Team = (props: { snackbarShowMessage: any; }) => {
 
   useEffect(() => {
     if (error) {
-      snackbarShowMessage(`Error: ${error}`, "error");
+      props.snackbarShowMessage(`Error: ${error}`, "error");
     }
   }, [error]);
 
@@ -73,9 +83,9 @@ const Team = (props: { snackbarShowMessage: any; }) => {
     if (!init) {
       dispatch(setFetchedInitialData());
     } else {
-      dispatch(fetchTeamData({ pageNumber, pageSize, sortItem }));
+      dispatch(fetchTeamData({ pageNumber, pageSize, sortItem, filter }));
     }
-  }, [dispatch, pageNumber, pageSize,sortItem, init]);
+  }, [dispatch, pageNumber, pageSize, sortItem, filter, init]);
 
   const handlePaginationModelChange = (model: GridPaginationModel) => {
     if (model.page !== pageNumber - 1) {
@@ -90,12 +100,19 @@ const Team = (props: { snackbarShowMessage: any; }) => {
     dispatch(setSortItem(model[0]));
   };
 
+  const handleFilterChange = (value: RowDataFilter) => {
+    dispatch(setFilter(value));
+  };
+
   return (
     <Box m="20px">
       <Header title="TEAM" subtitle="Managing the Team Members" />
+
+      <FilterComponent filter={filter} onFilterChange={handleFilterChange} />
+
       <Box
         m="40px 0 0 0"
-        height="75vh"
+        height="68vh"
         sx={{
           "& .MuiDataGrid-root": {
             border: "none",
@@ -131,9 +148,7 @@ const Team = (props: { snackbarShowMessage: any; }) => {
           sortingMode="server"
           loading={loading}
           initialState={{
-            sorting:{
-
-            },
+            sorting: {},
             pagination: {
               paginationModel: {
                 page: pageNumber - 1,

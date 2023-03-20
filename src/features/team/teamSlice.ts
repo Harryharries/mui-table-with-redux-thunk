@@ -4,6 +4,7 @@ import { createSlice, PayloadAction, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 import { ReviewerData } from "../../shared/model/reviewerData";
 import { RowData } from "../../shared/model/rowData";
+import { RowDataFilter } from "../../shared/model/rowDataFiliter";
 
 interface TeamState {
   init: boolean;
@@ -13,8 +14,8 @@ interface TeamState {
   pageNumber: number;
   pageSize: number;
   loading: boolean;
+  filter: RowDataFilter | null;
   error: string | null;
-  
 }
 
 interface JsonResponse {
@@ -30,6 +31,7 @@ const initialState: TeamState = {
   init: false,
   data: [],
   sortItem: null,
+  filter: null,
   totalCount: 0,
   pageNumber: 1,
   pageSize: 10,
@@ -43,13 +45,34 @@ function capitalizeFirstLetter(str: string): string {
 
 export const fetchTeamData = createAsyncThunk(
   "team/fetchTeamData",
-  async (params: { pageNumber: number; pageSize: number; sortItem: GridSortItem | null}) => {
+  async (params: {
+    pageNumber: number;
+    pageSize: number;
+    sortItem: GridSortItem | null;
+    filter: RowDataFilter | null;
+  }) => {
     try {
-      let url = `https://localhost:7046/api/Reviewer?pageNo=${params.pageNumber}&pageSize=${params.pageSize}`
-      if(params.sortItem){
-        url = url + `&sortColumn=${params.sortItem.field === 'name' ? 'FirstName': capitalizeFirstLetter(params.sortItem.field)}&sortOrder=${params.sortItem.sort}`
+      let url = `https://localhost:7046/api/Reviewer?pageNo=${params.pageNumber}&pageSize=${params.pageSize}`;
+      if (params.sortItem) {
+        url =
+          url +
+          `&sortColumn=${
+            params.sortItem.field === "name"
+              ? "FirstName"
+              : capitalizeFirstLetter(params.sortItem.field)
+          }&sortOrder=${params.sortItem.sort}`;
       }
-      const response = await axios.get<JsonResponse>( url );
+      if (params.filter?.name) {
+        url =
+          url +
+          `&filter=${params.filter.name}`;
+      }
+      if (params.filter?.id) {
+        url =
+          url +
+          `&Id=${params.filter.id}`;
+      }
+      const response = await axios.get<JsonResponse>(url);
       return response.data;
     } catch (error: any) {
       throw new Error(error.message);
@@ -81,6 +104,9 @@ const teamSlice = createSlice({
     setSortItem: (state, action: PayloadAction<GridSortItem>) => {
       state.sortItem = action.payload;
     },
+    setFilter: (state, action: PayloadAction<RowDataFilter>) => {
+      state.filter = action.payload;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -111,7 +137,13 @@ const teamSlice = createSlice({
   },
 });
 
-export const { setPageSize, setPageNumber, setFetchedInitialData, resetTeam, setSortItem } =
-  teamSlice.actions;
+export const {
+  setPageSize,
+  setPageNumber,
+  setFetchedInitialData,
+  resetTeam,
+  setSortItem,
+  setFilter
+} = teamSlice.actions;
 
 export default teamSlice.reducer;
